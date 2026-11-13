@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: Zartock Crafting Timer
+## Notes: Shows the time left until a whole queue of crafts is finished. /zct to move it.
+## Version: 0.1.0
+## SavedVariables: ZartockCraftingTimerDB
+
+Core.lua
