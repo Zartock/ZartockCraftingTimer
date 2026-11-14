@@ -5,13 +5,22 @@
 --
 -- The game only tells addons about the craft that is being cast right now
 -- (UnitCastingInfo) and how many more will follow it
--- (C_TradeSkillUI.GetRemainingRecasts). The total is therefore
+-- (C_TradeSkillUI.GetRemainingRecasts). Every time a cast starts, the moment
+-- the whole queue will be done is estimated as
 --
---     time left on the current cast + crafts still to come * time per craft
+--     end of the current cast + crafts still to come * (cast time + pause)
 --
--- Time per craft starts out as the cast time and is replaced by the measured
--- time between two cast starts as soon as there is one, because that includes
--- the short pause the server adds between crafts.
+-- where the pause is the short break the server adds between crafts. The
+-- display counts down to that moment on its own clock, so it keeps running
+-- through the pauses.
+--
+-- The game does not tell addons how long that pause is, so it is measured. One
+-- measurement is off by some network jitter, and in the estimate that error is
+-- multiplied by the number of crafts left. So a queue does not use its own
+-- measurements: it uses the long-run average of earlier queues, fixed for as
+-- long as the queue runs, and its measurements only go into the average for
+-- the next one. If the average is a little off, the timer runs a few percent
+-- fast or slow, evenly, which cannot be seen.
 
 local ADDON_NAME = ...
 
@@ -23,16 +32,39 @@ local GAP_GRACE = 1.5;
 
 local UPDATE_INTERVAL = 0.1;
 
+-- A pause between two casts is only believed when it is this short; anything
+-- longer was lag or a restarted queue.
+local MAX_GAP = 2;
+
+-- The pause estimate is a running average over at most this many crafts.
+local GAP_SAMPLES = 50;
+
+-- /zct log keeps this many of the latest crafts in the saved variables.
+local LOG_SIZE = 400;
+
+-- When the estimate changes, the displayed timer does not jump to it. It
+-- closes the difference gradually, a fraction of 1/SLEW_TIME of it per second,
+-- so the usual small corrections are spread too thin to be seen. Large ones
+-- are limited to running SLEW_MAX_RATE faster or slower than real time.
+local SLEW_TIME = 5;
+local SLEW_MAX_RATE = 0.5;
+
 local db;
 
 local state = {
     casting = false,    -- a craft is being cast right now
     multi = false,      -- this queue had more than one craft, so it is worth showing
     preview = false,    -- /zct: shown with sample numbers so it can be moved
+    startTime = 0,      -- GetTime() at which the current cast started
     endTime = 0,        -- GetTime() at which the current cast ends
-    perCraft = 0,       -- seconds from one cast start to the next
-    lastStart = nil,    -- GetTime() at which the previous cast started
-    recasts = 0,        -- crafts still to come after the current one
+    lastEnd = nil,      -- endTime of the previous cast in this queue
+    left = 0,           -- crafts left, including the current one
+    gap = 0,            -- average pause between two crafts, over all queues
+    queueGap = nil,     -- the pause this queue calculates with; nil until one is known
+    gapSamples = 0,     -- how many measurements the average is made of
+    target = 0,         -- GetTime() at which the queue is estimated to be done
+    shown = nil,        -- the same, as displayed; follows target without jumping
+    lastRefresh = 0,    -- GetTime() of the previous display update
     gapDeadline = 0,    -- GetTime() at which a pause between crafts is given up on
 };
 
@@ -101,11 +133,26 @@ end
 local function EndQueue()
     state.casting = false;
     state.multi = false;
-    state.lastStart = nil;
-    state.recasts = 0;
+    state.lastEnd = nil;
+    state.queueGap = nil;
+    state.left = 0;
+    state.shown = nil;
     if not state.preview then
         frame:Hide();
     end
+end
+
+local function UpdateTarget()
+    local perCraft = (state.endTime - state.startTime) + (state.queueGap or 0);
+    state.target = state.endTime + (state.left - 1) * perCraft;
+end
+
+local function SetLeft(left)
+    state.left = left;
+    if left > 1 then
+        state.multi = true;
+    end
+    UpdateTarget();
 end
 
 local function Refresh()
@@ -116,24 +163,41 @@ local function Refresh()
 
     local now = GetTime();
     if not state.casting then
-        -- Pause between two crafts: keep the last numbers until the next
-        -- cast starts, or give up when it does not.
+        -- Pause between two crafts: keep counting down until the next cast
+        -- starts, or give up when it does not.
         if now > state.gapDeadline then
             EndQueue();
+            return;
         end
-        return;
+    else
+        -- Around the start and end of a cast the game's own counter may or
+        -- may not have counted the craft yet, so it is only trusted in the
+        -- middle. In between, the count is kept by OnCastStart.
+        local progress = (now - state.startTime) / (state.endTime - state.startTime);
+        if progress > 0.25 and progress < 0.75 then
+            local left = (C_TradeSkillUI.GetRemainingRecasts() or 0) + 1;
+            if left ~= state.left then
+                SetLeft(left);
+                state.shown = nil;      -- a different number of crafts: no point easing into that
+            end
+        end
     end
 
-    state.recasts = C_TradeSkillUI.GetRemainingRecasts() or 0;
-    if state.recasts > 0 then
-        state.multi = true;
-    end
     if not state.multi then
         return;     -- a single craft; the cast bar already covers that
     end
 
-    local remaining = math.max(0, state.endTime - now) + state.recasts * state.perCraft;
-    SetDisplay(remaining, state.recasts + 1);
+    if not state.shown then
+        state.shown = state.target;
+    else
+        local dt = now - state.lastRefresh;
+        local step = (state.target - state.shown) * math.min(1, dt / SLEW_TIME);
+        local maxStep = dt * SLEW_MAX_RATE;
+        state.shown = state.shown + math.max(-maxStep, math.min(maxStep, step));
+    end
+    state.lastRefresh = now;
+
+    SetDisplay(math.max(0, state.shown - now), state.left);
     frame:Show();
 end
 
@@ -145,19 +209,49 @@ local function OnCastStart()
         return;
     end
 
-    local start = startMs / 1000;
-    local duration = (endMs - startMs) / 1000;
-
-    local sinceLast = state.lastStart and (start - state.lastStart);
-    if sinceLast and sinceLast >= duration and sinceLast <= duration + 2 then
-        state.perCraft = sinceLast;
-    elseif not state.lastStart or state.perCraft < duration then
-        state.perCraft = duration;
+    local continues = state.lastEnd ~= nil and state.left > 1;
+    if not continues then
+        EndQueue();
+        if state.gapSamples > 0 then
+            state.queueGap = state.gap;
+        end
     end
 
+    local oldTarget = state.target;
     state.casting = true;
+    state.startTime = startMs / 1000;
     state.endTime = endMs / 1000;
-    state.lastStart = start;
+
+    local gap;
+    if continues then
+        gap = state.startTime - state.lastEnd;
+        if gap >= 0 and gap <= MAX_GAP then
+            state.gapSamples = math.min(state.gapSamples + 1, GAP_SAMPLES);
+            state.gap = state.gap + (gap - state.gap) / state.gapSamples;
+            db.gap = state.gap;
+            db.gapSamples = state.gapSamples;
+            -- Nothing to go on from earlier queues: the first measurement
+            -- has to do for this one.
+            state.queueGap = state.queueGap or gap;
+        end
+        SetLeft(state.left - 1);
+    else
+        SetLeft((C_TradeSkillUI.GetRemainingRecasts() or 0) + 1);
+    end
+
+    if db.log then
+        table.insert(db.log, string.format(
+            "t=%.3f dur=%.3f gap=%s avg=%.3f used=%.3f left=%d api=%d shift=%s",
+            state.startTime, state.endTime - state.startTime,
+            gap and string.format("%.3f", gap) or "-", state.gap, state.queueGap or 0,
+            state.left, C_TradeSkillUI.GetRemainingRecasts() or -1,
+            continues and string.format("%+.3f", state.target - oldTarget) or "new"));
+        while #db.log > LOG_SIZE do
+            table.remove(db.log, 1);
+        end
+    end
+
+    state.lastEnd = state.endTime;
     Refresh();
 end
 
@@ -166,7 +260,7 @@ local function OnCastEnd()
         return;
     end
     state.casting = false;
-    if state.recasts > 0 then
+    if state.left > 1 then
         state.gapDeadline = GetTime() + GAP_GRACE;
     else
         EndQueue();
@@ -196,6 +290,10 @@ events:SetScript("OnEvent", function(self, event, arg1)
         end
         ZartockCraftingTimerDB = ZartockCraftingTimerDB or {};
         db = ZartockCraftingTimerDB;
+        if type(db.gap) == "number" and db.gap >= 0 and db.gap <= MAX_GAP then
+            state.gap = db.gap;
+            state.gapSamples = math.max(1, math.min(tonumber(db.gapSamples) or 1, GAP_SAMPLES));
+        end
         ApplyPosition();
 
         self:UnregisterEvent("ADDON_LOADED");
@@ -224,6 +322,12 @@ SlashCmdList.ZARTOCKCRAFTINGTIMER = function(msg)
         db.position = nil;
         ApplyPosition();
         print("|cff33ff99Crafting Timer|r: position reset.");
+        return;
+    elseif msg == "log" then
+        -- Records the timing of every craft in the saved variables, to find
+        -- out why the timer misbehaves. Written to disk on /reload or logout.
+        db.log = (not db.log) and {} or nil;
+        print("|cff33ff99Crafting Timer|r: logging " .. (db.log and "on. /reload after a queue to save it." or "off, log deleted."));
         return;
     end
 

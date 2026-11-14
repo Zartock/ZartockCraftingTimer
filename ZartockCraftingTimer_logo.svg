@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <!-- Wobbles every edge a little, so lines look inked by hand -->
+    <filter id="handDrawn" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="7" result="wobble"/>
+      <feDisplacementMap in="SourceGraphic" in2="wobble" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- Paper/paint grain laid over the whole icon -->
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="3"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0 0 0 -0.25"/>
+    </filter>
+    <filter id="blotches" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="11"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.75  0 0 0 0 0.4  1.6 0 0 0 -0.75"/>
+    </filter>
+
+    <path id="bulbs" d="M190 126 H322 C322 196 269 226 269 256 C269 286 322 316 322 386 H190 C190 316 243 286 243 256 C243 226 190 196 190 126 Z"/>
+    <clipPath id="inGlass">
+      <use href="#bulbs"/>
+    </clipPath>
+    <clipPath id="inFrame">
+      <rect x="36" y="36" width="440" height="440"/>
+    </clipPath>
+  </defs>
+
+  <!-- Frame: flat tones, worn rather than polished -->
+  <rect width="512" height="512" fill="#120a06"/>
+  <rect x="7" y="7" width="498" height="498" fill="#9c7430"/>
+  <path d="M7 7 H505 L476 36 H36 V476 L7 505 Z" fill="#d2a850"/>
+  <path d="M505 505 H7 L36 476 H476 V36 L505 7 Z" fill="#5f4217"/>
+  <path d="M14 14 H300 M14 14 V210" stroke="#f0d68c" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- nicks and scratches -->
+  <g stroke="#3a260c" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M118 12 l9 14"/>
+    <path d="M371 17 l-5 11 M379 15 l-3 8"/>
+    <path d="M17 322 l12 6"/>
+    <path d="M489 152 l-9 9"/>
+    <path d="M214 487 l7 10 M226 489 l3 6"/>
+    <path d="M492 402 l-10 4"/>
+  </g>
+  <rect x="32" y="32" width="448" height="448" fill="#120a06"/>
+
+  <!-- Backdrop: flat brown with a few loose brush strokes of forge light -->
+  <rect x="36" y="36" width="440" height="440" fill="#2a1710"/>
+  <g clip-path="url(#inFrame)">
+    <g filter="url(#handDrawn)">
+      <path d="M36 360 C120 318 190 372 262 344 C340 314 410 352 476 322 V476 H36 Z" fill="#4a2413"/>
+      <path d="M36 420 C110 396 200 438 290 410 C370 386 430 420 476 402 V476 H36 Z" fill="#6b3115"/>
+      <path d="M60 300 C100 290 130 296 168 286" stroke="#3b2015" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M352 268 C392 262 420 270 456 258" stroke="#3b2015" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M70 92 C120 80 150 90 196 76" stroke="#22120c" stroke-width="12" fill="none" stroke-linecap="round"/>
+    </g>
+    <rect x="36" y="36" width="440" height="440" filter="url(#blotches)" opacity="0.18"/>
+
+    <g filter="url(#handDrawn)" stroke-linejoin="round" stroke-linecap="round">
+      <!-- Smith's hammer, leaning behind the hourglass -->
+      <g transform="rotate(42 256 256)" stroke="#120a06">
+        <path d="M241 98 L271 96 L273 512 L239 514 Z" fill="#7d4f25" stroke-width="8"/>
+        <path d="M241 98 L252 97 L250 513 L239 514 Z" fill="#a06a34" stroke="none"/>
+        <path d="M262 180 L263 300 M258 330 L259 420" stroke="#4a2c14" stroke-width="3" fill="none"/>
+        <path d="M240 448 l33 -3 M240 468 l33 -2 M240 488 l33 -3" stroke-width="5" fill="none"/>
+
+        <path d="M152 30 L360 26 L375 45 L372 131 L358 149 L149 146 L137 130 L139 46 Z" fill="#646a72" stroke-width="9"/>
+        <path d="M152 30 L360 26 L375 45 L371 70 L140 74 L139 46 Z" fill="#9299a1" stroke="none"/>
+        <path d="M139 110 L373 106 L372 131 L358 149 L149 146 L137 130 Z" fill="#3c4148" stroke="none"/>
+        <path d="M160 40 L300 37 M316 37 L346 36" stroke="#d5dade" stroke-width="5" fill="none"/>
+        <path d="M228 30 L226 146 M288 28 L290 148" stroke-width="5" fill="none"/>
+        <!-- dents from use -->
+        <path d="M172 92 l10 5 M330 84 l8 -4 M250 96 l6 6" stroke="#2a2e33" stroke-width="4" fill="none"/>
+        <path d="M152 30 L360 26 L375 45 L372 131 L358 149 L149 146 L137 130 L139 46 Z" fill="none" stroke-width="9"/>
+      </g>
+
+      <!-- A few stray embers, uneven on purpose -->
+      <g fill="#f2a33a" stroke="none">
+        <path d="M94 148 l9 -5 l3 8 l-8 4 z"/>
+        <path d="M126 104 l5 -2 l1 6 l-5 1 z"/>
+        <path d="M70 222 l6 1 l-2 6 l-5 -2 z"/>
+        <path d="M420 322 l8 -3 l1 8 l-7 2 z"/>
+        <path d="M440 388 l4 -3 l3 5 l-5 3 z"/>
+      </g>
+
+      <!-- Hourglass, tipped a hair off true -->
+      <g transform="rotate(-3 256 256)" stroke="#120a06">
+        <!-- posts -->
+        <path d="M164 120 L183 120 L182 394 L165 394 Z" fill="#8f6a2a" stroke-width="7"/>
+        <path d="M168 122 L174 122 L173 392 L169 392 Z" fill="#d7b25c" stroke="none"/>
+        <path d="M330 120 L349 120 L348 394 L331 394 Z" fill="#8f6a2a" stroke-width="7"/>
+        <path d="M334 122 L340 122 L339 392 L335 392 Z" fill="#d7b25c" stroke="none"/>
+
+        <!-- glass -->
+        <use href="#bulbs" fill="#1b2a2c" stroke-width="8"/>
+        <g clip-path="url(#inGlass)" stroke="none">
+          <path d="M190 126 H250 C246 200 262 236 256 256 C262 286 244 330 250 386 H190 Z" fill="#2c4244"/>
+          <!-- sand still to run -->
+          <path d="M180 192 C210 204 236 196 262 204 C290 210 312 198 332 194 V262 H180 Z" fill="#d9952b"/>
+          <path d="M180 192 C210 204 236 196 262 204 C290 210 312 198 332 194 V204 C306 212 286 218 258 213 C232 208 208 212 180 203 Z" fill="#f4cf74"/>
+          <path d="M270 214 C296 216 316 208 332 204 V262 H262 C276 246 282 232 270 214 Z" fill="#a9661a"/>
+          <!-- falling stream and the finished pile -->
+          <path d="M253 250 L260 250 L259 330 L254 330 Z" fill="#f4cf74"/>
+          <path d="M176 392 C206 376 232 350 255 308 C276 346 304 374 336 392 Z" fill="#d9952b"/>
+          <path d="M255 308 C276 346 304 374 336 392 H296 C276 366 262 340 255 308 Z" fill="#a9661a"/>
+          <path d="M226 352 C236 340 246 326 254 312 C250 332 242 350 232 364 Z" fill="#f4cf74"/>
+          <!-- loose grains -->
+          <path d="M244 300 l3 2 M266 322 l2 3 M248 282 l2 3" stroke="#f4cf74" stroke-width="3" fill="none"/>
+        </g>
+        <use href="#bulbs" fill="none" stroke-width="8"/>
+        <path d="M207 142 C208 172 220 196 236 214" fill="none" stroke="#cfe6e4" stroke-width="6"/>
+        <path d="M204 158 l1 10" fill="none" stroke="#cfe6e4" stroke-width="4"/>
+        <path d="M212 366 C215 346 222 330 232 318" fill="none" stroke="#7fa3a2" stroke-width="5"/>
+
+        <!-- caps -->
+        <path d="M147 93 L365 91 L375 103 L374 119 L364 129 L147 128 L138 118 L139 104 Z" fill="#a37a30" stroke-width="8"/>
+        <path d="M147 93 L365 91 L375 103 L374 108 L139 110 L139 104 Z" fill="#dbb863" stroke="none"/>
+        <path d="M139 118 L374 117 L364 129 L147 128 Z" fill="#6a4a18" stroke="none"/>
+        <path d="M147 93 L365 91 L375 103 L374 119 L364 129 L147 128 L138 118 L139 104 Z" fill="none" stroke-width="8"/>
+
+        <path d="M147 385 L365 384 L374 395 L375 409 L365 420 L146 421 L138 409 L139 395 Z" fill="#a37a30" stroke-width="8"/>
+        <path d="M147 385 L365 384 L374 395 L374 400 L139 401 L139 395 Z" fill="#dbb863" stroke="none"/>
+        <path d="M138 410 L375 409 L365 420 L146 421 Z" fill="#6a4a18" stroke="none"/>
+        <path d="M147 385 L365 384 L374 395 L375 409 L365 420 L146 421 L138 409 L139 395 Z" fill="none" stroke-width="8"/>
+
+        <!-- rivets and wear -->
+        <g fill="#4f3610" stroke-width="3">
+          <circle cx="173" cy="111" r="6"/>
+          <circle cx="340" cy="110" r="5.5"/>
+          <circle cx="172" cy="403" r="5.5"/>
+          <circle cx="339" cy="402" r="6"/>
+        </g>
+        <path d="M218 99 l22 -1 M292 122 l16 0 M250 392 l30 -1 M204 414 l12 0" stroke="#f3e0a0" stroke-width="3" fill="none"/>
+        <path d="M262 100 l5 8 M312 396 l-4 7" stroke="#4f3610" stroke-width="3" fill="none"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Grain over everything -->
+  <rect width="512" height="512" filter="url(#grain)" opacity="0.22"/>
+</svg>

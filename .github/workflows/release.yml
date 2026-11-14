@@ -1,0 +1,46 @@
+# Pushing a tag like v0.4.0 uploads the addon to CurseForge and creates a
+# GitHub release with the zip attached.
+#
+# Needs the repository secret CF_API_TOKEN (a CurseForge API token).
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check that the tag matches the .toc version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          tag="${tag#.}"
+          toc="$(sed -n 's/^## Version:[[:space:]]*//p' *.toc | tr -d '\r')"
+          if [ "$tag" != "$toc" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match '## Version: $toc' in the .toc."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - run: pip install requests
+
+      - name: Upload to CurseForge
+        run: ./deploy.py
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CHANGELOG: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+
+      - name: Create GitHub release
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
